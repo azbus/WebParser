@@ -15,15 +15,20 @@ import java.util.regex.Pattern;
 public class WebParser {
 
     private String link = "";
+    private final String pattern = "\\u003ca href=\"[\\w/.:\\u002d]+\" *\\u003e[\\wа-яА-Я/ \\u002d]*\\u003c/a\\u003e"; // <a href="[any link]">[any text]</a>
+    private final String leftExcessPart = "\\u003ca href=\""; //  <a href=" 
+    private final String rightExcessPart = "\" *\u003e[\\wа-яА-Я/ \u002d]*\u003c/a\u003e"; //  ">[any text]</a> 
 
     /**
      * Gets subLinks from code of page
-     * @param text html-code of page
+     *
+     * @param html html-code of page
      * @return String[] massive with subLinks
      */
-    public String[] WebParse(String text) {
+    public String[] getLinksFromHtml(String html) {
 
-        Pattern p = Pattern.compile("\u003ca href=\"[\\w/.:\u002d]+\" *\u003e[\\wа-яА-Я/ \u002d]*\u003c/a\u003e");
+        String text = pageContent(html);
+        Pattern p = Pattern.compile(pattern);
         Matcher m = p.matcher(text);
 
         int count = 0;
@@ -33,15 +38,38 @@ public class WebParser {
             count++;
             start = m.start();
             end = m.end();
-            System.out.println("found: " + count + " : " + start + " - " + end);
             String fg = text.substring(start, end);
             list.add(fg);
-            System.out.println(fg);
         }
         String[] links = new String[count];
         int j = 0;
         for (String line : list) {
-            links[j] = line.replaceAll("\\u003ca href=\"", "").replaceAll("\" *\u003e[\\wа-яА-Я/ \u002d]*\u003c/a\u003e", "");
+            links[j] = line.replaceAll(leftExcessPart, "").replaceAll(rightExcessPart, "");
+            j++;
+        }
+
+        return links;
+    }
+
+    public String[] getLinksFromHtml(String html, int depth) {
+        String text = pageContent(html);
+        Pattern p = Pattern.compile(pattern);
+        Matcher m = p.matcher(text);
+
+        int count = 0;
+        List<String> list = new ArrayList<String>();
+        int start, end;
+        while (m.find()) {
+            count++;
+            start = m.start();
+            end = m.end();
+            String fg = text.substring(start, end);
+            list.add(fg);
+        }
+        String[] links = new String[count];
+        int j = 0;
+        for (String line : list) {
+            links[j] = line.replaceAll(leftExcessPart, "").replaceAll(rightExcessPart, "");
             j++;
         }
 
@@ -50,10 +78,11 @@ public class WebParser {
 
     /**
      * Gets the code page on the link.
+     *
      * @param url link to page
      * @return String code page
      */
-    protected String pageContent(String url) {
+    private String pageContent(String url) {
         String content = "";
         URL u;
 
@@ -64,7 +93,6 @@ public class WebParser {
 
             while ((line = reader.readLine()) != null) {
                 content += line;
-                //System.out.println(line);
             }
             reader.close();
         } catch (Exception e) {
@@ -83,15 +111,26 @@ public class WebParser {
 //    }
 
     public static void main(String[] args) {
-        String link = "http://www.netcracker.com/rus/";
+        //String link = "http://www.netcracker.com/rus/";
+        String link;
+        int depth;
+        if (args.length == 2) {
+            link = args[0];
+            depth = Integer.parseInt(args[1]);
+        }
+        if(args.length == 1){
+            link = args[0];
+            depth = 0;
+        }
+        else{
+            throw new Error("Set input parameters! Parameters: -link[, depth]");
+        }
         WebParser pars = new WebParser();
 
-        String text = pars.pageContent(link);
-        String[] subLinks = pars.WebParse(text);
-        
-        
-        //System.out.print(subLinks);
+        //String text = pars.pageContent(link);
+        String[] subLinks = pars.getLinksFromHtml(link, depth);
 
+        //System.out.print(subLinks);
     }
 
 }
